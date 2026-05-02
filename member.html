@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FitAdmin — Member Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="members.css"/>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-text">FitAdmin</div>
+      <div class="logo-sub">Pro Panel</div>
+    </div>
+    <nav>
+      <a class="nav-item" href="dashboard.html">📊 Dashboard</a>
+      <a class="nav-item active" href="members.html">👥 Members</a>
+      <a class="nav-item" href="classes.html">🏋️ Classes</a>
+    </nav>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title">Member Management</div>
+      <span class="admin-badge">ADMIN</span>
+    </div>
+
+    <div class="content">
+
+      <!-- TOOLBAR -->
+      <div class="toolbar">
+        <input
+          class="search-box"
+          id="memberSearch"
+          placeholder="🔍 Search by name or email…"
+          oninput="renderMembers()"
+        />
+        <button class="filter-btn active" data-plan="All"    onclick="setPlanFilter(this)">All</button>
+        <button class="filter-btn"        data-plan="Bronze" onclick="setPlanFilter(this)">🥉 Bronze</button>
+        <button class="filter-btn"        data-plan="Silver" onclick="setPlanFilter(this)">🥈 Silver</button>
+        <button class="filter-btn"        data-plan="Gold"   onclick="setPlanFilter(this)">🥇 Gold</button>
+        <button class="btn btn-primary"   onclick="openAddModal()">+ Add Member</button>
+      </div>
+
+      <!-- LIVE MEMBER COUNT — updates dynamically with every filter/search -->
+      <div class="record-count">
+        Showing <span id="memberCount">0</span> members
+      </div>
+
+      <!-- MEMBERS TABLE — loaded from localStorage, pre-seeded with 5 members -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Plan</th>
+              <th>Join Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="memberTableBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADD / EDIT MEMBER MODAL ══ -->
+<div class="modal-bg" id="memberModal">
+  <div class="modal">
+    <h2 id="modalTitle">Add Member</h2>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input id="f_name" placeholder="Jane Doe" />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="f_email" type="email" placeholder="jane@mail.com" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phone</label>
+        <input id="f_phone" placeholder="+1 555 0000" />
+      </div>
+      <div class="form-group">
+        <label>Join Date</label>
+        <input id="f_date" type="date" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Plan</label>
+      <select id="f_plan">
+        <option value="Bronze">Bronze</option>
+        <option value="Silver">Silver</option>
+        <option value="Gold">Gold</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost"   onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMember()">Save Member</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONFIRM DELETE MODAL ══ -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal modal-sm">
+    <h2>⚠️ Confirm Delete</h2>
+    <p id="confirmMsg" class="confirm-text">Are you sure?</p>
+    <div class="modal-actions centered">
+      <button class="btn btn-ghost"  onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div class="toast" id="toast"></div>
+
+<script src="members.js"></script>
+</body>
+</html>
