@@ -1,64 +1,62 @@
+// ============================================================
+// Jenkins Pipeline: Checkout main -> CI Test -> Docker Build -> Run
+// Repository: https://github.com/ayoubbouhlais4-gif/ayoub.git
+// Branch: main
+// ============================================================
+
 pipeline {
     agent any
 
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '15'))
+    }
+
     environment {
-        IMAGE_NAME     = 'my-node-app'
-        IMAGE_TAG      = "${BUILD_NUMBER}"
-        CONTAINER_NAME = "test-container-${BUILD_NUMBER}"
-        PORT           = '3000'
+        REPO_URL = 'https://github.com/ayoubbouhlais4-gif/ayoub.git'
+        CRED_ID  = 'github-credentials' // هذا هو الاسم المُعرف للـ Token داخل Jenkins
     }
 
     stages {
-        stage('1. Checkout Code') {
+
+        stage('1. Checkout Main Branch') {
             steps {
-                echo '=== Pulling code from GitHub ==='
-                checkout scm
+                echo "Pulling main branch from GitHub..."
+                git branch: 'main',
+                    url: "${REPO_URL}",
+                    credentialsId: "${CRED_ID}"
             }
         }
 
-        stage('2. Generate Dockerfile with Node 14 Alpine') {
+        stage('2. Install & Run Tests') {
             steps {
-                echo '=== Generating Dockerfile dynamically ==='
-                sh '''
-                cat <<EOF > Dockerfile
-FROM node:14-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install || true
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-EOF
-                '''
+                echo "Installing dependencies and testing main code..."
+                sh 'npm ci || npm install'
+                sh 'npm test'
+                sh 'node --check server.js'
             }
         }
 
         stage('3. Build Docker Image') {
             steps {
-                echo "=== Building Image using node:14-alpine ==="
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest ."
+                echo "Building Docker image my-node-app:${BUILD_NUMBER}..."
+                sh "docker build -t my-node-app:${BUILD_NUMBER} ."
             }
         }
 
-        stage('4. Run Container & Test Response') {
+        stage('4. Run Container & Check Health') {
             steps {
-                echo '=== Starting Container and Running Health Test ==='
+                echo "Running container and checking health..."
+                sh """
+                    docker rm -f my-node-app-test-${BUILD_NUMBER} || true
+                    docker run -d --name my-node-app-test-${BUILD_NUMBER} -p 3000:3000 my-node-app:${BUILD_NUMBER}
+                """
                 script {
-                    sh "docker run -d --name ${CONTAINER_NAME} -p ${PORT}:3000 ${IMAGE_NAME}:${IMAGE_TAG}"
-                    
-                    sleep 5
-
-                    sh """
-                        STATUS=\$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${PORT} || true)
-                        echo "Application HTTP Response Code: \$STATUS"
-                        
-                        if [ "\$STATUS" -eq 200 ]; then
-                            echo "Test Passed!"
-                        else
-                            echo "Test Failed!"
-                            exit 1
-                        fi
-                    """
+                    retry(5) {
+                        sleep(time: 3, unit: 'SECONDS')
+                        sh 'curl -f http://localhost:3000/health'
+                    }
                 }
             }
         }
@@ -66,23 +64,14 @@ EOF
 
     post {
         always {
-            echo '=== Cleaning up container ==='
-            sh """
-                docker stop ${CONTAINER_NAME} || true
-                docker rm -f ${CONTAINER_NAME} || true
-            """
+            echo 'Cleaning up test container...'
+            sh "docker rm -f my-node-app-test-${BUILD_NUMBER} || true"
         }
         success {
-            echo '========================================='
-            echo '  BUILD STATUS: SUCCESS 🎉'
-            echo '  App built with node:14-alpine successfully!'
-            echo '========================================='
+            echo "SUCCESS: Build #${BUILD_NUMBER} passed tests and running successfully."
         }
         failure {
-            echo '========================================='
-            echo '  BUILD STATUS: FAILURE ❌'
-            echo '  Pipeline failed during build or test.'
-            echo '========================================='
+            echo "FAILURE: Build #${BUILD_NUMBER} failed."
         }
     }
 }
